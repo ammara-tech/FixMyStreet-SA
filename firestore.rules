@@ -1,0 +1,128 @@
+rules_version = '2';
+
+// FixMyStreet SA's security rules: who can read and change what. Paste them into
+// Firebase → Firestore Database → Rules, and press Publish.
+//
+// - Anyone can read a report (that's what the map and a shared link show). A demo report is the
+//   exception: only the person trying the demo can read their own.
+// - Anyone with an account (a guest account counts) can report a problem, and say "I see this too".
+//   A report always starts as "reported", with one vote: the person who made it.
+// - A vote and the report's count move together: the count can only go up by one when that person's
+//   vote is added, and down by one when it's taken back. Nobody can type in a number.
+// - Only council staff can change a report's status. A staff member has a document in the "staff"
+//   collection, made by hand in the console, named after their account id. Someone trying the demo
+//   is council for their own example reports only.
+// - The person who reported something can delete it while it's still only "reported".
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+    function reportPath(reportId) {
+      return /databases/$(database)/documents/reports/$(reportId);
+    }
+    function votePath(reportId, uid) {
+      return /databases/$(database)/documents/votes/$(reportId + '_' + uid);
+    }
+    function isStaff() {
+      return signedIn() && exists(/databases/$(database)/documents/staff/$(request.auth.uid));
+    }
+
+    function validReport(d) {
+      return d.keys().hasOnly(['ownerId', 'number', 'title', 'category', 'description', 'area', 'lat', 'lng', 'status', 'statusNote', 'votes', 'demo', 'createdAt', 'updatedAt', 'fixedAt'])
+        && d.ownerId is string
+        && d.number is string && d.number.size() == 8
+        && d.title is string && d.title.size() >= 5 && d.title.size() <= 80
+        && d.category in ['pothole', 'streetlight', 'water', 'sewage', 'refuse', 'signal', 'sign', 'other']
+        && d.description is string && d.description.size() <= 500
+        && d.area is string && d.area.size() <= 60
+        && d.lat is number && d.lat >= -35.0 && d.lat <= -22.0
+        && d.lng is number && d.lng >= 16.3 && d.lng <= 33.0
+        && d.status in ['reported', 'acknowledged', 'fixed']
+        && d.statusNote is string && d.statusNote.size() <= 200
+        && d.votes is int && d.votes >= 0
+        && d.demo is bool
+        && d.createdAt is number
+        && d.updatedAt is number
+        && d.fixedAt is number;
+    }
+
+    // Council moving a report along: only these fields change
+    function validStatusChange() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'statusNote', 'updatedAt', 'fixedAt'])
+        && request.resource.data.status in ['reported', 'acknowledged', 'fixed']
+        && request.resource.data.statusNote is string && request.resource.data.statusNote.size() <= 200
+        && request.resource.data.updatedAt is number
+        && request.resource.data.fixedAt is number;
+    }
+
+    // Someone adding or taking back their "I see this too": only the count changes, by one, together with their vote
+    function validVoteChange(reportId) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['votes'])
+        && (resource.data.demo == false || resource.data.ownerId == request.auth.uid)
+        && request.resource.data.votes is int
+        && (
+          (request.resource.data.votes == resource.data.votes + 1
+            && !exists(votePath(reportId, request.auth.uid)) && existsAfter(votePath(reportId, request.auth.uid)))
+          || (request.resource.data.votes == resource.data.votes - 1 && request.resource.data.votes >= 0
+            && exists(votePath(reportId, request.auth.uid)) && !existsAfter(votePath(reportId, request.auth.uid)))
+        );
+    }
+
+    match /reports/{reportId} {
+      // "resource == null": looking up a report that doesn't exist says "not found", not "not allowed"
+      allow get: if resource == null || resource.data.demo == false || (signedIn() && resource.data.ownerId == request.auth.uid);
+      // The map asks for demo == false, and the demo asks for its owner's reports: both are allowed here
+      allow list: if resource.data.demo == false || (signedIn() && resource.data.ownerId == request.auth.uid);
+
+      // A real report starts as "reported" with one vote (its owner's, made in the same step). An example
+      // report for the demo (invisible to everyone else) can start further along, with a few votes.
+      allow create: if signedIn() && validReport(request.resource.data) && request.resource.data.ownerId == request.auth.uid
+        && ((request.resource.data.demo == false
+            && request.resource.data.status == 'reported' && request.resource.data.statusNote == ''
+            && request.resource.data.votes == 1 && request.resource.data.fixedAt == 0
+            && existsAfter(votePath(reportId, request.auth.uid)))
+          || (request.resource.data.demo == true && request.resource.data.votes <= 200));
+
+      allow update: if signedIn() && (
+        ((isStaff() || (resource.data.demo == true && resource.data.ownerId == request.auth.uid)) && validStatusChange())
+        || validVoteChange(reportId));
+
+      allow delete: if signedIn() && (
+        isStaff()
+        || (resource.data.ownerId == request.auth.uid && (resource.data.status == 'reported' || resource.data.demo == true)));
+    }
+
+    // One person's "I see this too". The id is the report's id and the person's id, so there can only be one.
+    match /votes/{voteId} {
+      function validVote(d) {
+        return d.keys().hasOnly(['reportId', 'uid', 'at'])
+          && d.reportId is string && d.uid is string && d.at is number
+          && voteId == d.reportId + '_' + d.uid;
+      }
+      allow read: if signedIn() && resource.data.uid == request.auth.uid;
+
+      // Either the report exists and its count goes up by one in the same step, or the report is being
+      // made in the same step by this person (its first vote).
+      allow create: if signedIn() && validVote(request.resource.data) && request.resource.data.uid == request.auth.uid
+        && (
+          (exists(reportPath(request.resource.data.reportId))
+            && getAfter(reportPath(request.resource.data.reportId)).data.votes == get(reportPath(request.resource.data.reportId)).data.votes + 1)
+          || (!exists(reportPath(request.resource.data.reportId))
+            && existsAfter(reportPath(request.resource.data.reportId))
+            && getAfter(reportPath(request.resource.data.reportId)).data.ownerId == request.auth.uid)
+        );
+
+      // Taking a vote back: the count goes down by one, or the report itself is being deleted (or is already gone)
+      allow delete: if signedIn() && resource.data.uid == request.auth.uid
+        && (!existsAfter(reportPath(resource.data.reportId))
+          || getAfter(reportPath(resource.data.reportId)).data.votes == get(reportPath(resource.data.reportId)).data.votes - 1);
+    }
+
+    // Council staff. Read-only here: you can only see whether your own account is on the list.
+    match /staff/{uid} {
+      allow get: if signedIn() && request.auth.uid == uid;
+    }
+  }
+}

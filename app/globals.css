@@ -1,0 +1,394 @@
+@import "tailwindcss";
+
+/*
+  FixMyStreet SA's look: South African road signage and council paperwork.
+  Concrete-grey paper with a faint survey grid, asphalt black for the header, and the yellow of a
+  road-works sign for buttons and the chosen answer, with hazard stripes as the divider. Headings are
+  in Barlow Condensed (the narrow letters of a road sign), everything else in Barlow, and ticket
+  numbers in IBM Plex Mono. Each problem is a job card with a coloured edge: red for reported, blue
+  for acknowledged, green for fixed, always with a word and an icon as well, never colour alone.
+  Dark mode is the night shift: asphalt paper, with the same yellow. Text colours pass WCAG AA in both.
+*/
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+@theme {
+  --color-page: #e9e7e0; /* concrete */
+  --color-card: #ffffff;
+  --color-ink: #17171a;
+  --color-ink-soft: #54555b; /* quieter text (passes AA on page and card) */
+  --color-line: #cdcabf;
+  --color-edge: #86837a; /* the border of a text box or button you can tap */
+  --color-brand: #ffc20e; /* road-works yellow: buttons, the chosen filter */
+  --color-on-brand: #17171a;
+  --color-brand-text: #6b4a00; /* the yellow's darker cousin, for text and links on pale paper */
+  --color-brand-soft: #fff3c4;
+  --color-asphalt: #141416;
+  --color-focus: #0b57d0;
+  --color-rep: #b3261e; /* reported */
+  --color-rep-soft: #fdeceb;
+  --color-ack: #1b5fae; /* acknowledged */
+  --color-ack-soft: #e6effb;
+  --color-fix: #17692f; /* fixed */
+  --color-fix-soft: #e3f4e8;
+
+  --font-sans: var(--font-barlow, ui-sans-serif), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-barlow-condensed, "Arial Narrow"), "Arial Narrow", Impact, sans-serif;
+  --font-mono: var(--font-plex-mono, ui-monospace), ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+
+:root[data-theme="dark"] {
+  --color-page: #131315;
+  --color-card: #1e1e22;
+  --color-ink: #f3f0e6;
+  --color-ink-soft: #b9b6ab;
+  --color-line: #3b3b42;
+  --color-edge: #7b7b84;
+  --color-brand: #ffc20e;
+  --color-on-brand: #17171a;
+  --color-brand-text: #ffd54a;
+  --color-brand-soft: #34290a;
+  --color-asphalt: #0a0a0b;
+  --color-focus: #ffd54a;
+  --color-rep: #ff8f84;
+  --color-rep-soft: #3d1f1c;
+  --color-ack: #8fbaff;
+  --color-ack-soft: #1b2a42;
+  --color-fix: #7ddb9d;
+  --color-fix-soft: #19321f;
+  color-scheme: dark;
+}
+
+html {
+  color-scheme: light;
+}
+
+/* A faint survey grid, drawn by the browser (no image to download) */
+:root {
+  --grid: linear-gradient(rgb(23 23 26 / 0.045) 1px, transparent 1px), linear-gradient(90deg, rgb(23 23 26 / 0.045) 1px, transparent 1px);
+}
+:root[data-theme="dark"] {
+  --grid: linear-gradient(rgb(255 255 255 / 0.04) 1px, transparent 1px), linear-gradient(90deg, rgb(255 255 255 / 0.04) 1px, transparent 1px);
+}
+
+body {
+  background-color: var(--color-page);
+  background-image: var(--grid);
+  background-size: 44px 44px;
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-tap-highlight-color: transparent;
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Headings: Barlow Condensed, like a road sign. Unlayered, so it wins over Tailwind's weight classes. */
+h1,
+h2,
+h3,
+.font-display {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  line-height: 1.05;
+}
+h1 {
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+.font-mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Small capitals line above a heading */
+.eyebrow {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-brand-text);
+}
+
+@layer components {
+  .tool {
+    display: inline-flex;
+    height: 2.5rem;
+    min-width: 2.5rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.5rem;
+    color: inherit;
+  }
+  .tool:hover {
+    background: color-mix(in srgb, currentColor 14%, transparent);
+  }
+  .field {
+    width: 100%;
+    border-radius: 0.5rem;
+    border: 2px solid var(--color-edge);
+    background: var(--color-card);
+    color: var(--color-ink);
+    padding: 0.6rem 0.8rem;
+    font-size: 16px; /* 16px stops phones zooming in when you tap a box */
+  }
+  .field:focus {
+    border-color: var(--color-ink);
+    outline: none;
+    box-shadow: 0 0 0 3px var(--color-brand);
+  }
+  .field::placeholder {
+    color: var(--color-ink-soft);
+    opacity: 0.85;
+  }
+  /* The main button: a yellow sign plate that presses down */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 0.5rem;
+    border: 2px solid #141416;
+    padding: 0.6rem 1.25rem;
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    line-height: 1.1;
+    background: var(--color-brand);
+    color: var(--color-on-brand);
+    box-shadow: 0 3px 0 #141416;
+    transition: transform 0.06s, box-shadow 0.06s;
+  }
+  :root[data-theme="dark"] .btn {
+    box-shadow: 0 3px 0 #000;
+  }
+  .btn:hover {
+    filter: brightness(1.06);
+  }
+  .btn:active:not(:disabled) {
+    transform: translateY(2px);
+    box-shadow: 0 1px 0 #141416;
+  }
+  .btn:disabled {
+    opacity: 0.55;
+    box-shadow: none;
+  }
+  .btn-quiet {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 0.5rem;
+    border: 2px solid var(--color-edge);
+    padding: 0.5rem 1rem;
+    font-weight: 600;
+    background: var(--color-card);
+    color: var(--color-ink);
+  }
+  .btn-quiet:hover {
+    border-color: var(--color-ink);
+  }
+  .btn-quiet:disabled {
+    opacity: 0.55;
+  }
+  /* A report as a job card: white paper, a coloured edge for its status, and a dashed line like a tear-off stub */
+  .ticket {
+    position: relative;
+    border-radius: 0.5rem;
+    background: var(--color-card);
+    border: 1px solid var(--color-line);
+    border-left: 8px solid var(--color-edge);
+    box-shadow: 0 1px 0 rgb(0 0 0 / 0.04);
+  }
+  .ticket[data-status="reported"] {
+    border-left-color: var(--color-rep);
+  }
+  .ticket[data-status="acknowledged"] {
+    border-left-color: var(--color-ack);
+  }
+  .ticket[data-status="fixed"] {
+    border-left-color: var(--color-fix);
+  }
+  .ticket[data-selected="true"] {
+    outline: 3px solid var(--color-brand);
+    outline-offset: 1px;
+  }
+  .stub {
+    border-top: 2px dashed var(--color-line);
+  }
+  /* A yellow road sign panel with a black border and a thin black line set inside it */
+  .plate {
+    position: relative;
+    border-radius: 0.9rem;
+    border: 3px solid #141416;
+    background: #ffc20e;
+    color: #17171a;
+    box-shadow:
+      inset 0 0 0 3px #ffc20e,
+      inset 0 0 0 5px #141416;
+  }
+  .plain-card {
+    border-radius: 0.5rem;
+    background: var(--color-card);
+    border: 1px solid var(--color-line);
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    border-radius: 9999px;
+    border: 2px solid var(--color-edge);
+    background: var(--color-card);
+    padding: 0.25rem 0.8rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .chip:hover {
+    border-color: var(--color-ink);
+  }
+  .chip[aria-pressed="true"],
+  .chip[aria-checked="true"] {
+    background: var(--color-brand);
+    border-color: #141416;
+    color: var(--color-on-brand);
+  }
+  /* Status badges: a tint, the colour, an icon and a word */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    border-radius: 0.35rem;
+    padding: 0.1rem 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  .badge[data-status="reported"] {
+    background: var(--color-rep-soft);
+    color: var(--color-rep);
+  }
+  .badge[data-status="acknowledged"] {
+    background: var(--color-ack-soft);
+    color: var(--color-ack);
+  }
+  .badge[data-status="fixed"] {
+    background: var(--color-fix-soft);
+    color: var(--color-fix);
+  }
+  /* "I see this too" */
+  .vote {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.1rem;
+    min-width: 4.25rem;
+    border-radius: 0.5rem;
+    border: 2px solid var(--color-edge);
+    background: var(--color-card);
+    padding: 0.4rem 0.6rem;
+    font-weight: 700;
+    line-height: 1.1;
+  }
+  .vote:hover {
+    border-color: var(--color-ink);
+  }
+  .vote[aria-pressed="true"] {
+    background: var(--color-brand);
+    border-color: #141416;
+    color: var(--color-on-brand);
+  }
+}
+
+/* Hazard tape: yellow and black diagonal stripes, the divider under the header and on the sign-in picture */
+.hazard {
+  height: 10px;
+  background: repeating-linear-gradient(135deg, #ffc20e 0 14px, #141416 14px 28px);
+}
+
+/* The sign-in picture's background: a survey map */
+.survey {
+  background-color: var(--color-page);
+  background-image:
+    radial-gradient(40% 50% at 10% 15%, rgb(255 194 14 / 0.22), transparent 70%), var(--grid);
+  background-size: auto, 44px 44px;
+}
+:root[data-theme="dark"] .survey {
+  background-image:
+    radial-gradient(40% 50% at 10% 15%, rgb(255 194 14 / 0.1), transparent 70%), var(--grid);
+}
+
+/* ── The map (Leaflet) ───────────────────────────────────────────────────────────────────────── */
+.leaflet-container {
+  font-family: var(--font-sans);
+  background: var(--color-page);
+}
+/* The night shift: dim and invert the map tiles, so the map isn't a bright white block */
+:root[data-theme="dark"] .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.9) saturate(0.6);
+}
+.leaflet-control-attribution {
+  background: var(--color-card) !important;
+  color: var(--color-ink) !important;
+}
+.leaflet-control-attribution a {
+  color: var(--color-ink) !important;
+  text-decoration: underline;
+}
+.leaflet-bar a,
+.leaflet-bar a:hover {
+  background-color: var(--color-card);
+  color: var(--color-ink);
+  border-bottom-color: var(--color-line);
+}
+.pin {
+  background: none;
+  border: 0;
+  transform-origin: 50% 100%;
+  transition: transform 0.12s;
+  filter: drop-shadow(0 2px 2px rgb(0 0 0 / 0.35));
+}
+.pin:hover,
+.pin:focus-visible {
+  transform: scale(1.18);
+}
+.pin[data-selected="true"] {
+  transform: scale(1.35);
+  z-index: 1000 !important;
+}
+.pin svg {
+  display: block;
+}
+
+/* Cards that settle onto the page, and a toast that rises. Both are off for people who ask for less motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .rise {
+    animation: rise 0.4s ease-out both;
+  }
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+  }
+}
+
+/* Before Firebase has checked who's signed in, the page has both the loading screen and the
+   sign-in screen; the hint from app/layout.tsx picks which one shows (see lib/auth.ts). */
+html[data-signed-in] .gate-login,
+html:not([data-signed-in]) .gate-splash {
+  display: none;
+}
+
+/* The header is dark in both themes, so its focus ring is yellow */
+.on-dark :focus-visible {
+  outline-color: #ffd54a;
+}
