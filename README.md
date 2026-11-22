@@ -115,7 +115,12 @@ safely, the example reports, the map pins, and that the lists and limits in `fir
 that no write is open to everyone). GitHub runs them on every push (`.github/workflows/tests.yml`).
 
 ## Lighthouse
-*(Add your PageSpeed Insights scores here once it's deployed. The sign-in page is the one it can open.)*
+Checked with Google PageSpeed Insights on the live sign-in page (22 Nov 2026):
+
+| | Performance | Accessibility | Best Practices | SEO |
+|---|---|---|---|---|
+| Mobile | 100 | 100 | 100 | 100 |
+| Desktop | 100 | 100 | 100 | 100 |
 
 ## Setup (run it yourself)
 1. **Firebase:** create a project at [console.firebase.google.com](https://console.firebase.google.com).
