@@ -5,7 +5,7 @@ light) by dropping a pin on a map. Neighbours say **"I see this too"**, the most
 the municipality's progress (*Reported → Acknowledged → Fixed*) is there for everyone to see, with a note from the
 council on each one.
 
-**Live site:** https://fixmystreet-sa.vercel.app/ 
+**Live site:** https://fix-my-street-sa.vercel.app/
 
 Built by Ammara Badat as part of my portfolio. It uses Firebase, like my other apps since PaperTrail.
 
